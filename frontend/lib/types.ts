@@ -53,24 +53,3 @@ export type Application = {
   properties: Partial<Property> | null;
   profiles: Partial<Profile> | null;
 };
-
-export type Tenancy = {
-  id: string;
-  property_id: string;
-  tenant_id: string;
-  landlord_id: string;
-  end_date: string;
-};
-
-export type MaintenanceRequest = {
-  id: string;
-  title: string;
-  description: string;
-  status: string;
-  created_at: string;
-  media_urls: MediaItem[] | null;
-  tenant_name: string;
-  property_title: string;
-  profiles: { full_name: string } | null;
-  properties: { title: string } | null;
-};

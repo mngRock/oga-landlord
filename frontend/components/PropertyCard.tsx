@@ -1,8 +1,9 @@
-'use client' // THE FIX: This directive marks the component as a Client Component.
+'use client'
 
 import Link from 'next/link';
+import { Property } from '@/lib/types';
 
-export default function PropertyCard({ property, linkTo = 'view' }: { property: any, linkTo?: 'manage' | 'view' }) {
+export default function PropertyCard({ property, linkTo = 'view' }: { property: Property, linkTo?: 'manage' | 'view' }) {
   const href = linkTo === 'manage' 
     ? `/dashboard/properties/${property.id}` 
     : `/find-properties/${property.id}`;
@@ -12,8 +13,6 @@ export default function PropertyCard({ property, linkTo = 'view' }: { property: 
       return 'https://placehold.co/600x400?text=No+Image';
     }
     const firstItem = property.media_urls[0];
-    
-    // Handle both old data (string) and new data ({url, type}) formats
     if (typeof firstItem === 'string') {
       return firstItem;
     }
@@ -31,7 +30,6 @@ export default function PropertyCard({ property, linkTo = 'view' }: { property: 
               src={getDisplayImage()} 
               alt={property.title} 
               className="w-full h-full object-cover transition-transform group-hover:scale-105" 
-              // This onError is the reason the component must be a Client Component
               onError={(e) => { e.currentTarget.src = 'https://placehold.co/600x400/eeeeee/_?text=Image+Error'; }}
             />
         </div>
