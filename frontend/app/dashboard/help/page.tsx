@@ -2,20 +2,20 @@
 
 import { useState } from 'react';
 
-// A simple accordion component for the FAQs
+// A simple, reusable accordion component for the FAQs
 function AccordionItem({ title, children }: { title: string, children: React.ReactNode }) {
     const [isOpen, setIsOpen] = useState(false);
     return (
         <div className="border-b">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex justify-between items-center w-full py-4 text-left font-semibold"
+                className="flex justify-between items-center w-full py-4 text-left font-semibold text-gray-800 hover:text-teal-600"
             >
                 <span>{title}</span>
                 <i className={`fas fa-chevron-down transition-transform ${isOpen ? 'rotate-180' : ''}`}></i>
             </button>
-            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-96 py-4' : 'max-h-0'}`}>
-                <div className="text-gray-600">
+            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-96 py-4 pt-0' : 'max-h-0'}`}>
+                <div className="text-gray-600 prose">
                     {children}
                 </div>
             </div>
@@ -34,19 +34,23 @@ export default function HelpPage() {
                         <h2 className="text-lg font-semibold mb-4">Frequently Asked Questions (FAQs)</h2>
                         
                         <AccordionItem title="How do I add a new property?">
-                            <p>As a landlord, you can add a new property by navigating to the "Properties" page from your dashboard and clicking the "+ Add New Property" button. You will be guided through a form to enter all the necessary details.</p>
+                            <p>As a landlord, you can add a new property by navigating to the "Properties" page from your dashboard and clicking the "+ Add New Property" button. You will be guided through a form to enter all the necessary details for either a single unit or a multi-unit building.</p>
                         </AccordionItem>
                         
                         <AccordionItem title="How does the landlord verification work?">
-                            <p>To build trust, landlords can get verified by submitting a valid ID and proof of property ownership on the "Settings" page. Our team will review the documents, and a "Verified" badge will be added to your profile and listings upon approval.</p>
+                            <p>To build trust on the platform, landlords can get verified by submitting a valid ID and proof of property ownership on the "Settings" page. Our admin team will review the documents, and a "Verified" badge will be added to your profile and listings upon approval.</p>
                         </AccordionItem>
 
                         <AccordionItem title="How do I apply for a property?">
-                            <p>As a renter, you can browse listings on the "Find Properties" page. When you find a property you're interested in, click on it to view the details and then use the "Apply & Message Landlord" button to submit your application.</p>
+                            <p>As a renter, you can browse listings on the "Find Properties" page. When you find a property you're interested in, click on it to view the details and then use the "Apply & Message Landlord" button to submit your application and send an introductory message.</p>
+                        </AccordionItem>
+                        
+                        <AccordionItem title="How are payments handled in V1.0?">
+                            <p>For this version, all payments (rent, caution fees, etc.) are handled directly between the landlord and the tenant outside of the platform (e.g., via bank transfer). Landlords can then use the "Payments" module to manually record these transactions for their own records and to share the history with their tenants.</p>
                         </AccordionItem>
 
-                        <AccordionItem title="How are payments handled?">
-                            <p>For Version 1.0, all payments (rent, caution fees, etc.) are handled directly between the landlord and the tenant outside of the platform. Landlords can then use the "Payments" module to manually record these transactions for their records.</p>
+                        <AccordionItem title="Can I be both a Landlord and a Renter?">
+                            <p>Yes. You can have both a Landlord and a Renter profile under a single account. You can create your second profile and switch between them at any time from the "Settings" page.</p>
                         </AccordionItem>
                     </div>
                 </div>
@@ -56,11 +60,11 @@ export default function HelpPage() {
                         <p className="text-sm text-gray-600">If you can't find the answer you're looking for, please feel free to reach out to our support team.</p>
                         <div className="mt-4 space-y-3">
                             <p className="flex items-center text-sm">
-                                <i className="fas fa-envelope text-teal-600 mr-2"></i>
+                                <i className="fas fa-envelope text-teal-600 mr-2 w-4 text-center"></i>
                                 support@ogalandlord.ng
                             </p>
                             <p className="flex items-center text-sm">
-                                <i className="fas fa-phone text-teal-600 mr-2"></i>
+                                <i className="fas fa-phone text-teal-600 mr-2 w-4 text-center"></i>
                                 +234 800 123 4567
                             </p>
                         </div>
