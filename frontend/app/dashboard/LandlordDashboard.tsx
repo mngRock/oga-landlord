@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabaseServer';
 import Link from 'next/link';
 import PropertyCard from '@/components/PropertyCard';
+import { Property } from '@/lib/types';
 
 // Helper function to get an icon based on activity text
 const getActivityIcon = (message: string) => {
@@ -22,8 +23,8 @@ export default async function LandlordDashboard() {
   const { data: dashboardData, error } = await supabase.rpc('get_landlord_dashboard_data');
   
   const stats = dashboardData?.stats || { property_count: 0, tenant_count: 0, pending_applications: 0 };
-  const recentProperties = dashboardData?.recent_properties || [];
-  const recentActivities = dashboardData?.recent_activities || [];
+  const recentProperties: Property[] = dashboardData?.recent_properties || [];
+  const recentActivities: any[] = dashboardData?.recent_activities || [];
 
   return (
     <div className="p-6 space-y-8">
