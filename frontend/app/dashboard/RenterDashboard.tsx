@@ -1,36 +1,94 @@
 import { createClient } from '@/lib/supabaseServer';
 import Link from 'next/link';
+import Image from 'next/image';
 import PropertyCard from '@/components/PropertyCard';
-import { Profile, Property, Application } from '@/lib/types';
+import { Property, Application } from '@/lib/types';
 
-// Helper function to get a relevant icon based on the activity message text
+// ---- Local types to model the RPC payload ----
+type Activity = {
+  id: string | number;
+  message: string;
+  created_at: string; // ISO string
+};
+
+type Media = { url: string };
+
+type BasicProperty = {
+  id: string | number;
+  title: string;
+  address: string;
+  city: string;
+  media_urls?: Media[] | null;
+};
+
+type Tenancy = {
+  rent_amount: number;
+  end_date: string; // ISO string
+};
+
+type ActiveTenancy = {
+  property: BasicProperty;
+  tenancy: Tenancy;
+};
+
+type DashboardData = {
+  active_tenancy: ActiveTenancy | null;
+  recent_applications: Application[];
+  recommended_properties: Property[];
+  recent_activities: Activity[];
+};
+
+// Helper to pick an icon based on activity message text
 const getActivityIcon = (message: string) => {
-    const lowerMessage = message.toLowerCase();
-    if (lowerMessage.includes('applied')) return 'fa-clipboard-list';
-    if (lowerMessage.includes('maintenance')) return 'fa-tools';
-    if (lowerMessage.includes('payment')) return 'fa-money-bill-wave';
-    if (lowerMessage.includes('agreement') || lowerMessage.includes('lease') || lowerMessage.includes('tenancy')) return 'fa-file-contract';
-    if (lowerMessage.includes('updated') || lowerMessage.includes('status')) return 'fa-info-circle';
-    return 'fa-bell';
+  const lowerMessage = message.toLowerCase();
+  if (lowerMessage.includes('applied')) return 'fa-clipboard-list';
+  if (lowerMessage.includes('maintenance')) return 'fa-tools';
+  if (lowerMessage.includes('payment')) return 'fa-money-bill-wave';
+  if (
+    lowerMessage.includes('agreement') ||
+    lowerMessage.includes('lease') ||
+    lowerMessage.includes('tenancy')
+  )
+    return 'fa-file-contract';
+  if (lowerMessage.includes('updated') || lowerMessage.includes('status'))
+    return 'fa-info-circle';
+  return 'fa-bell';
 };
 
 export default async function RenterDashboard() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user?.id).single();
-  
-  const { data: dashboardData } = await supabase.rpc('get_renter_dashboard_data');
-  
-  const activeTenancy = dashboardData?.active_tenancy;
-  const recentApplications: Application[] = dashboardData?.recent_applications || [];
-  const recommendedProperties: Property[] = dashboardData?.recommended_properties || [];
-  const recentActivities: any[] = dashboardData?.recent_activities || [];
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', user?.id)
+    .single();
+
+  const { data: dashboardDataRaw } = await supabase.rpc('get_renter_dashboard_data');
+
+  // Safely coerce the RPC result to our typed structure
+  const dashboardData = (dashboardDataRaw ?? null) as DashboardData | null;
+
+  const activeTenancy = dashboardData?.active_tenancy ?? null;
+  const recentApplications: Application[] = dashboardData?.recent_applications ?? [];
+  const recommendedProperties: Property[] = dashboardData?.recommended_properties ?? [];
+  const recentActivities: Activity[] = dashboardData?.recent_activities ?? [];
+
+  const firstName = profile?.full_name?.split(' ')?.[0] ?? 'User';
+
+  const currentImageUrl =
+    activeTenancy?.property.media_urls?.[0]?.url || 'https://placehold.co/600x400';
 
   return (
     <div className="p-6 space-y-8">
       <div>
         <h1 className="text-2xl font-semibold text-gray-800">Renter Dashboard</h1>
-        <p className="text-gray-600">Welcome back, {profile?.full_name?.split(' ')[0] || 'User'}! Find your perfect home or manage your current rental.</p>
+        <p className="text-gray-600">
+          Welcome back, {firstName}! Find your perfect home or manage your current rental.
+        </p>
       </div>
 
       {/* Current Rental Section */}
@@ -38,33 +96,70 @@ export default async function RenterDashboard() {
         <div className="bg-white rounded-xl shadow-sm p-6 border">
           <div className="flex flex-col lg:flex-row gap-6">
             <div className="lg:w-1/3 flex-shrink-0">
-              <img 
-                src={activeTenancy.property.media_urls?.[0]?.url || 'https://placehold.co/600x400'} 
-                alt={activeTenancy.property.title} 
-                className="w-full h-48 object-cover rounded-lg"
-              />
+              <div className="relative w-full h-48">
+                <Image
+                  src={currentImageUrl}
+                  alt={activeTenancy.property.title}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 33vw"
+                  className="object-cover rounded-lg"
+                  priority
+                />
+              </div>
             </div>
             <div className="lg:w-2/3">
               <div className="flex justify-between items-start">
                 <div>
                   <h2 className="text-xl font-semibold text-gray-800">Your Current Rental</h2>
-                  <h3 className="text-lg font-medium text-gray-700 mt-1">{activeTenancy.property.title}</h3>
+                  <h3 className="text-lg font-medium text-gray-700 mt-1">
+                    {activeTenancy.property.title}
+                  </h3>
                   <div className="flex items-center text-gray-600 mt-2 text-sm">
                     <i className="fas fa-map-marker-alt text-teal-600 mr-2"></i>
-                    <p>{activeTenancy.property.address}, {activeTenancy.property.city}</p>
+                    <p>
+                      {activeTenancy.property.address}, {activeTenancy.property.city}
+                    </p>
                   </div>
                 </div>
-                <span className="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-800 flex-shrink-0">Active Lease</span>
+                <span className="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-800 flex-shrink-0">
+                  Active Lease
+                </span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 text-sm">
-                <div className="p-4 bg-gray-50 rounded-lg"><p className="text-gray-500">Rent Amount</p><p className="text-lg font-semibold">₦{new Intl.NumberFormat().format(activeTenancy.tenancy.rent_amount)}</p></div>
-                {/* THE FIX: Display the lease end date here as the next payment date */}
-                <div className="p-4 bg-gray-50 rounded-lg"><p className="text-gray-500">Next Payment</p><p className="text-lg font-semibold">{new Date(activeTenancy.tenancy.end_date).toLocaleDateString()}</p></div>
-                <div className="p-4 bg-gray-50 rounded-lg"><p className="text-gray-500">Lease Ends</p><p className="text-lg font-semibold">{new Date(activeTenancy.tenancy.end_date).toLocaleDateString()}</p></div>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-gray-500">Rent Amount</p>
+                  <p className="text-lg font-semibold">
+                    ₦{new Intl.NumberFormat().format(activeTenancy.tenancy.rent_amount)}
+                  </p>
+                </div>
+                {/* If you truly intend "Next Payment" to be the lease end date, keep as-is.
+                    Otherwise, replace with your actual next payment date field. */}
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-gray-500">Next Payment</p>
+                  <p className="text-lg font-semibold">
+                    {new Date(activeTenancy.tenancy.end_date).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-gray-500">Lease Ends</p>
+                  <p className="text-lg font-semibold">
+                    {new Date(activeTenancy.tenancy.end_date).toLocaleDateString()}
+                  </p>
+                </div>
               </div>
               <div className="flex mt-6 space-x-3">
-                <Link href={`/dashboard/my-rental`} className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-teal-700">View Details</Link>
-                <Link href={`/dashboard/maintenance`} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-50">Maintenance Request</Link>
+                <Link
+                  href={`/dashboard/my-rental`}
+                  className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-teal-700"
+                >
+                  View Details
+                </Link>
+                <Link
+                  href={`/dashboard/maintenance`}
+                  className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-50"
+                >
+                  Maintenance Request
+                </Link>
               </div>
             </div>
           </div>
@@ -74,35 +169,43 @@ export default async function RenterDashboard() {
       {/* My Applications Section */}
       <div className="bg-white rounded-xl shadow-sm p-6 border">
         <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-800">My Recent Applications</h2>
-            <Link href="/dashboard/my-applications" className="text-sm text-teal-600 hover:underline font-medium">View All</Link>
+          <h2 className="text-xl font-semibold text-gray-800">My Recent Applications</h2>
+          <Link href="/dashboard/my-applications" className="text-sm text-teal-600 hover:underline font-medium">
+            View All
+          </Link>
         </div>
         {recentApplications.length > 0 ? (
-            <ul className="divide-y divide-gray-200">
-                {recentApplications.map((app: any) => (
-                    <li key={app.id} className="py-3 flex justify-between items-center">
-                        <div>
-                            <p className="font-medium text-gray-800">{app.property_title}</p>
-                            <p className="text-sm text-gray-500">Applied on: {new Date(app.created_at).toLocaleDateString()}</p>
-                        </div>
-                        <span className="capitalize text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-800">{app.status.replace(/_/g, ' ')}</span>
-                    </li>
-                ))}
-            </ul>
+          <ul className="divide-y divide-gray-200">
+            {recentApplications.map((app: Application) => (
+              <li key={String(app.id)} className="py-3 flex justify-between items-center">
+                <div>
+                  <p className="font-medium text-gray-800">{(app as any).property_title ?? 'Application'}</p>
+                  <p className="text-sm text-gray-500">
+                    Applied on: {new Date(app.created_at as unknown as string).toLocaleDateString()}
+                  </p>
+                </div>
+                <span className="capitalize text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-800">
+                  {String((app as any).status ?? 'pending').replace(/_/g, ' ')}
+                </span>
+              </li>
+            ))}
+          </ul>
         ) : (
-            <p className="text-sm text-gray-500">You have no recent applications.</p>
+          <p className="text-sm text-gray-500">You have no recent applications.</p>
         )}
       </div>
-      
+
       {/* Recommended Properties Section */}
       <div>
         <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-800">Recommended For You</h2>
-            <Link href="/find-properties" className="text-sm text-teal-600 hover:underline font-medium">Find More Properties <i className="fas fa-arrow-right ml-1"></i></Link>
+          <h2 className="text-xl font-semibold text-gray-800">Recommended For You</h2>
+          <Link href="/find-properties" className="text-sm text-teal-600 hover:underline font-medium">
+            Find More Properties <i className="fas fa-arrow-right ml-1"></i>
+          </Link>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {recommendedProperties.map((prop: any) => (
-            <PropertyCard key={prop.id} property={prop} linkTo="view" />
+          {recommendedProperties.map((prop: Property) => (
+            <PropertyCard key={String((prop as any).id)} property={prop} linkTo="view" />
           ))}
         </div>
       </div>
@@ -111,20 +214,23 @@ export default async function RenterDashboard() {
       <div className="bg-white rounded-xl shadow-sm p-6 border">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Recent Activities</h2>
         <div className="space-y-4">
-            {recentActivities.length > 0 ? recentActivities.map((activity: any) => (
-                <div key={activity.id} className="flex items-start">
-                    <div className="p-2 bg-gray-100 rounded-full text-gray-600 w-8 h-8 flex items-center justify-center flex-shrink-0">
-                        <i className={`fas ${getActivityIcon(activity.message)}`}></i>
-                    </div>
-                    <div className="ml-4">
-                        <p className="text-gray-800 text-sm">{activity.message}</p>
-                        <p className="text-xs text-gray-500">{new Date(activity.created_at).toLocaleString()}</p>
-                    </div>
+          {recentActivities.length > 0 ? (
+            recentActivities.map((activity: Activity) => (
+              <div key={String(activity.id)} className="flex items-start">
+                <div className="p-2 bg-gray-100 rounded-full text-gray-600 w-8 h-8 flex items-center justify-center flex-shrink-0">
+                  <i className={`fas ${getActivityIcon(activity.message)}`}></i>
                 </div>
-            )) : <p className="text-sm text-gray-500">No recent activities.</p>}
+                <div className="ml-4">
+                  <p className="text-gray-800 text-sm">{activity.message}</p>
+                  <p className="text-xs text-gray-500">{new Date(activity.created_at).toLocaleString()}</p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-gray-500">No recent activities.</p>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
